@@ -61,7 +61,8 @@ local function notify(title, text)
 		Title = title,
 		Text = text,
 		Duration = 4,
-		Icon = "rbxassetid://3284684952" -- Replace this ID with your own image if desired
+		Icon = "rbxassetid://6031071050" -- Replace this ID with y
+		
 	})
 end
 
