@@ -1,7 +1,9 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
 -- UI Setup
 local screenGui = Instance.new("ScreenGui")
@@ -11,9 +13,9 @@ screenGui.Parent = game.CoreGui
 local btn = Instance.new("TextButton")
 btn.Name = "textbutton"
 btn.Text = "Skidder.cc"
-btn.Size = UDim2.new(0, 200, 0, 200)
+btn.Size = UDim2.new(0, 300, 0, 300)
 btn.Position = UDim2.new(0, 30, 0, 30)
-btn.TextSize = 25
+btn.TextScaled = true
 btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 btn.TextColor3 = Color3.fromRGB(0, 0, 0)
 btn.Font = Enum.Font.GothamBold
@@ -28,23 +30,32 @@ btncorner.Parent = btn
 -- Camlock settings
 local camlockEnabled = false
 local smoothness = 0.9
-local range = 100 -- Reasonable range for target locking
+local range = 100 -- Max lock-on range
 local currentTarget
 
--- Get closest visible player within range
-local function getClosestPlayer()
-	local closestPlayer
-	local shortestDistance = range
+-- Get closest player to mouse/camera center
+local function getClosestToCursor()
+	local closestPlayer = nil
+	local closestDist = math.huge
+	local mousePos
+
+	-- PC uses mouse position; mobile uses screen center
+	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+	else
+		mousePos = Vector2.new(Mouse.X, Mouse.Y)
+	end
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			local hrp = player.Character.HumanoidRootPart
-			local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
+			local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+			local distanceFromCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
 
-			-- Check if within range and on screen
-			local screenPoint, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-			if distance < shortestDistance and onScreen then
-				shortestDistance = distance
+			local worldDistance = (Camera.CFrame.Position - hrp.Position).Magnitude
+
+			if onScreen and distanceFromCursor < closestDist and worldDistance <= range then
+				closestDist = distanceFromCursor
 				closestPlayer = player
 			end
 		end
@@ -53,7 +64,7 @@ local function getClosestPlayer()
 	return closestPlayer
 end
 
--- Lock the camera smoothly
+-- Lock the camera smoothly to the target
 RunService.RenderStepped:Connect(function()
 	if camlockEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
 		local targetPos = currentTarget.Character.HumanoidRootPart.Position
@@ -68,14 +79,14 @@ btn.MouseButton1Click:Connect(function()
 	camlockEnabled = not camlockEnabled
 
 	if camlockEnabled then
-		currentTarget = getClosestPlayer()
+		currentTarget = getClosestToCursor()
 		if currentTarget then
 			btn.Text = "Camlock: ON"
 			warn("Skidder.cc - Camlock Enabled on:", currentTarget.Name)
 		else
 			camlockEnabled = false
 			btn.Text = "Camlock: OFF"
-			warn("No target found within range.")
+			warn("No player near mouse/camera.")
 		end
 	else
 		currentTarget = nil
