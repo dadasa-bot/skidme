@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
@@ -29,32 +30,42 @@ btncorner.CornerRadius = UDim.new(0, 10)
 local smoothSlider = Instance.new("TextBox")
 smoothSlider.Size = UDim2.new(0, 120, 0, 30)
 smoothSlider.Position = UDim2.new(0, 30, 0, 80)
-smoothSlider.PlaceholderText = "Smoothness (0-1)"
+smoothSlider.PlaceholderText = "Smoothness (any #)"
 smoothSlider.Text = "0.9"
 smoothSlider.TextScaled = true
 smoothSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 smoothSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
 smoothSlider.Font = Enum.Font.Gotham
-smoothSlider.Parent = btn
+smoothSlider.Parent = screenGui
 
 -- Prediction Input
 local predictionSlider = Instance.new("TextBox")
 predictionSlider.Size = UDim2.new(0, 120, 0, 30)
 predictionSlider.Position = UDim2.new(0, 30, 0, 120)
-predictionSlider.PlaceholderText = "Prediction (e.g. 0.13)"
+predictionSlider.PlaceholderText = "Prediction (any #)"
 predictionSlider.Text = "0.13"
 predictionSlider.TextScaled = true
 predictionSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 predictionSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
 predictionSlider.Font = Enum.Font.Gotham
-predictionSlider.Parent = btn
+predictionSlider.Parent = screenGui
 
 -- Camlock Settings
 local camlockEnabled = false
 local currentTarget = nil
 local range = 10000
 
--- Helper: Get closest player to cursor ONCE
+-- Notification function
+local function notify(title, text)
+	StarterGui:SetCore("SendNotification", {
+		Title = title,
+		Text = text,
+		Duration = 4,
+		Icon = "rbxassetid://3284684952" -- Replace this ID with your own image if desired
+	})
+end
+
+-- Get closest player to cursor
 local function getClosestToCursor()
 	local closestPlayer = nil
 	local closestDist = math.huge
@@ -79,37 +90,37 @@ local function getClosestToCursor()
 	return closestPlayer
 end
 
--- Main Camera Update
+-- Main Camera Lock Logic
 RunService.RenderStepped:Connect(function()
 	if camlockEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
 		local hrp = currentTarget.Character.HumanoidRootPart
-		local prediction = tonumber(predictionSlider.Text) or 0.13
+		local prediction = tonumber(predictionSlider.Text) or 0
 		local smoothness = tonumber(smoothSlider.Text) or 0.9
 
 		local predictedPosition = hrp.Position + (hrp.Velocity * prediction)
 		local camPos = Camera.CFrame.Position
 		local direction = (predictedPosition - camPos).Unit
-		local lerpedDir = (Camera.CFrame.LookVector):Lerp(direction, smoothness)
+		local lerpedDir = Camera.CFrame.LookVector:Lerp(direction, math.clamp(smoothness, 0, 1))
 		Camera.CFrame = CFrame.new(camPos, camPos + lerpedDir)
 	end
 end)
 
--- Toggle Button
+-- Toggle Camlock
 btn.MouseButton1Click:Connect(function()
 	if not camlockEnabled then
 		currentTarget = getClosestToCursor()
 		if currentTarget then
 			camlockEnabled = true
 			btn.Text = "Camlock: ON"
-			warn("Locked onto:", currentTarget.Name)
+			notify("Skidder.cc Camlock", "Locked onto: " .. currentTarget.Name)
 		else
 			btn.Text = "Camlock: OFF"
-			warn("No player found.")
+			notify("Skidder.cc Camlock", "No player found near mouse/camera.")
 		end
 	else
 		camlockEnabled = false
 		currentTarget = nil
 		btn.Text = "Camlock: OFF"
-		warn("Camlock disabled")
+		notify("Skidder.cc Camlock", "Camlock disabled.")
 	end
 end)
