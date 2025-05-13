@@ -25,7 +25,7 @@ btn.Parent = screenGui
 local btncorner = Instance.new("UICorner", btn)
 btncorner.CornerRadius = UDim.new(0, 10)
 
--- Smoothness Slider
+-- Smoothness Input
 local smoothSlider = Instance.new("TextBox")
 smoothSlider.Size = UDim2.new(0, 120, 0, 30)
 smoothSlider.Position = UDim2.new(0, 30, 0, 80)
@@ -35,9 +35,9 @@ smoothSlider.TextScaled = true
 smoothSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 smoothSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
 smoothSlider.Font = Enum.Font.Gotham
-smoothSlider.Parent = screenGui
+smoothSlider.Parent = btn
 
--- Prediction Slider
+-- Prediction Input
 local predictionSlider = Instance.new("TextBox")
 predictionSlider.Size = UDim2.new(0, 120, 0, 30)
 predictionSlider.Position = UDim2.new(0, 30, 0, 120)
@@ -47,16 +47,17 @@ predictionSlider.TextScaled = true
 predictionSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 predictionSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
 predictionSlider.Font = Enum.Font.Gotham
-predictionSlider.Parent = screenGui
+predictionSlider.Parent = btn
 
 -- Camlock Settings
 local camlockEnabled = false
-local range = 300
-local currentTarget
+local currentTarget = nil
+local range = 10000
 
--- Helpers
+-- Helper: Get closest player to cursor ONCE
 local function getClosestToCursor()
-	local closestPlayer, closestDist = nil, math.huge
+	local closestPlayer = nil
+	local closestDist = math.huge
 	local mousePos = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 		and Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 		or Vector2.new(Mouse.X, Mouse.Y)
@@ -65,11 +66,11 @@ local function getClosestToCursor()
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			local hrp = player.Character.HumanoidRootPart
 			local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-			local distFromCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-			local worldDist = (Camera.CFrame.Position - hrp.Position).Magnitude
+			local distanceFromCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+			local worldDistance = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-			if onScreen and distFromCursor < closestDist and worldDist <= range then
-				closestDist = distFromCursor
+			if onScreen and distanceFromCursor < closestDist and worldDistance <= range then
+				closestDist = distanceFromCursor
 				closestPlayer = player
 			end
 		end
@@ -78,29 +79,37 @@ local function getClosestToCursor()
 	return closestPlayer
 end
 
--- Main Camlock Logic
+-- Main Camera Update
 RunService.RenderStepped:Connect(function()
-	if not camlockEnabled then return end
-
-	currentTarget = getClosestToCursor()
-	local pred = tonumber(predictionSlider.Text) or 0.13
-	local smoothness = tonumber(smoothSlider.Text) or 0.9
-
-	if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+	if camlockEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
 		local hrp = currentTarget.Character.HumanoidRootPart
-		local velocity = hrp.Velocity * pred
-		local targetPos = hrp.Position + velocity
-		local camPos = Camera.CFrame.Position
+		local prediction = tonumber(predictionSlider.Text) or 0.13
+		local smoothness = tonumber(smoothSlider.Text) or 0.9
 
-		local dir = (targetPos - camPos).Unit
-		local lerped = dir:Lerp((targetPos - camPos).Unit, smoothness)
-		Camera.CFrame = CFrame.new(camPos, camPos + lerped)
+		local predictedPosition = hrp.Position + (hrp.Velocity * prediction)
+		local camPos = Camera.CFrame.Position
+		local direction = (predictedPosition - camPos).Unit
+		local lerpedDir = (Camera.CFrame.LookVector):Lerp(direction, smoothness)
+		Camera.CFrame = CFrame.new(camPos, camPos + lerpedDir)
 	end
 end)
 
--- Toggle Camlock
+-- Toggle Button
 btn.MouseButton1Click:Connect(function()
-	camlockEnabled = not camlockEnabled
-	btn.Text = camlockEnabled and "Camlock: ON" or "Camlock: OFF"
-	warn("Camlock " .. (camlockEnabled and "enabled" or "disabled"))
+	if not camlockEnabled then
+		currentTarget = getClosestToCursor()
+		if currentTarget then
+			camlockEnabled = true
+			btn.Text = "Camlock: ON"
+			warn("Locked onto:", currentTarget.Name)
+		else
+			btn.Text = "Camlock: OFF"
+			warn("No player found.")
+		end
+	else
+		camlockEnabled = false
+		currentTarget = nil
+		btn.Text = "Camlock: OFF"
+		warn("Camlock disabled")
+	end
 end)
