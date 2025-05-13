@@ -6,56 +6,70 @@ local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 -- UI Setup
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "screenGui"
-screenGui.Parent = game.CoreGui
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+screenGui.Name = "CamlockUI"
 
+-- Camlock Button
 local btn = Instance.new("TextButton")
-btn.Name = "textbutton"
-btn.Text = "Skidder.cc"
 btn.Size = UDim2.new(0, 120, 0, 40)
 btn.Position = UDim2.new(0, 30, 0, 30)
+btn.Text = "Camlock: OFF"
 btn.TextScaled = true
 btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 btn.TextColor3 = Color3.fromRGB(0, 0, 0)
 btn.Font = Enum.Font.GothamBold
-btn.Active = true
 btn.Draggable = true
+btn.Active = true
 btn.Parent = screenGui
 
-local btncorner = Instance.new("UICorner")
+local btncorner = Instance.new("UICorner", btn)
 btncorner.CornerRadius = UDim.new(0, 10)
-btncorner.Parent = btn
 
--- Camlock settings
+-- Smoothness Slider
+local smoothSlider = Instance.new("TextBox")
+smoothSlider.Size = UDim2.new(0, 120, 0, 30)
+smoothSlider.Position = UDim2.new(0, 30, 0, 80)
+smoothSlider.PlaceholderText = "Smoothness (0-1)"
+smoothSlider.Text = "0.9"
+smoothSlider.TextScaled = true
+smoothSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+smoothSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
+smoothSlider.Font = Enum.Font.Gotham
+smoothSlider.Parent = screenGui
+
+-- Prediction Slider
+local predictionSlider = Instance.new("TextBox")
+predictionSlider.Size = UDim2.new(0, 120, 0, 30)
+predictionSlider.Position = UDim2.new(0, 30, 0, 120)
+predictionSlider.PlaceholderText = "Prediction (e.g. 0.13)"
+predictionSlider.Text = "0.13"
+predictionSlider.TextScaled = true
+predictionSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+predictionSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
+predictionSlider.Font = Enum.Font.Gotham
+predictionSlider.Parent = screenGui
+
+-- Camlock Settings
 local camlockEnabled = false
-local smoothness = 0.9
-local range = 10000 -- Max lock-on range
+local range = 300
 local currentTarget
 
--- Get closest player to mouse/camera center
+-- Helpers
 local function getClosestToCursor()
-	local closestPlayer = nil
-	local closestDist = math.huge
-	local mousePos
-
-	-- PC uses mouse position; mobile uses screen center
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-	else
-		mousePos = Vector2.new(Mouse.X, Mouse.Y)
-	end
+	local closestPlayer, closestDist = nil, math.huge
+	local mousePos = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+		and Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+		or Vector2.new(Mouse.X, Mouse.Y)
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			local hrp = player.Character.HumanoidRootPart
 			local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-			local distanceFromCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+			local distFromCursor = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+			local worldDist = (Camera.CFrame.Position - hrp.Position).Magnitude
 
-			local worldDistance = (Camera.CFrame.Position - hrp.Position).Magnitude
-
-			if onScreen and distanceFromCursor < closestDist and worldDistance <= range then
-				closestDist = distanceFromCursor
+			if onScreen and distFromCursor < closestDist and worldDist <= range then
+				closestDist = distFromCursor
 				closestPlayer = player
 			end
 		end
@@ -64,33 +78,29 @@ local function getClosestToCursor()
 	return closestPlayer
 end
 
--- Lock the camera smoothly to the target
+-- Main Camlock Logic
 RunService.RenderStepped:Connect(function()
-	if camlockEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
-		local targetPos = currentTarget.Character.HumanoidRootPart.Position
+	if not camlockEnabled then return end
+
+	currentTarget = getClosestToCursor()
+	local pred = tonumber(predictionSlider.Text) or 0.13
+	local smoothness = tonumber(smoothSlider.Text) or 0.9
+
+	if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+		local hrp = currentTarget.Character.HumanoidRootPart
+		local velocity = hrp.Velocity * pred
+		local targetPos = hrp.Position + velocity
 		local camPos = Camera.CFrame.Position
-		local newCFrame = CFrame.new(camPos, camPos:Lerp(targetPos, smoothness))
-		Camera.CFrame = newCFrame
+
+		local dir = (targetPos - camPos).Unit
+		local lerped = dir:Lerp((targetPos - camPos).Unit, smoothness)
+		Camera.CFrame = CFrame.new(camPos, camPos + lerped)
 	end
 end)
 
--- Toggle camlock on button click
+-- Toggle Camlock
 btn.MouseButton1Click:Connect(function()
 	camlockEnabled = not camlockEnabled
-
-	if camlockEnabled then
-		currentTarget = getClosestToCursor()
-		if currentTarget then
-			btn.Text = "Camlock: ON"
-			warn("Skidder.cc - Camlock Enabled on:", currentTarget.Name)
-		else
-			camlockEnabled = false
-			btn.Text = "Camlock: OFF"
-			warn("No player near mouse/camera.")
-		end
-	else
-		currentTarget = nil
-		btn.Text = "Camlock: OFF"
-		warn("Skidder.cc - Camlock Disabled")
-	end
+	btn.Text = camlockEnabled and "Camlock: ON" or "Camlock: OFF"
+	warn("Camlock " .. (camlockEnabled and "enabled" or "disabled"))
 end)
