@@ -26,30 +26,6 @@ btn.Parent = screenGui
 local btncorner = Instance.new("UICorner", btn)
 btncorner.CornerRadius = UDim.new(0, 10)
 
--- Smoothness Input
-local smoothSlider = Instance.new("TextBox")
-smoothSlider.Size = UDim2.new(0, 120, 0, 30)
-smoothSlider.Position = UDim2.new(0, 30, 0, 80)
-smoothSlider.PlaceholderText = "Smoothness (any #)"
-smoothSlider.Text = "0.9"
-smoothSlider.TextScaled = true
-smoothSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-smoothSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
-smoothSlider.Font = Enum.Font.Gotham
-smoothSlider.Parent = screenGui
-
--- Prediction Input
-local predictionSlider = Instance.new("TextBox")
-predictionSlider.Size = UDim2.new(0, 120, 0, 30)
-predictionSlider.Position = UDim2.new(0, 30, 0, 120)
-predictionSlider.PlaceholderText = "Prediction (any #)"
-predictionSlider.Text = "0.13"
-predictionSlider.TextScaled = true
-predictionSlider.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-predictionSlider.TextColor3 = Color3.fromRGB(0, 0, 0)
-predictionSlider.Font = Enum.Font.Gotham
-predictionSlider.Parent = screenGui
-
 -- Camlock Settings
 local camlockEnabled = false
 local currentTarget = nil
@@ -61,7 +37,7 @@ local function notify(title, text)
 		Title = title,
 		Text = text,
 		Duration = 4,
-		Icon = "rbxassetid://6031071050" -- Replace this ID with y
+		Icon = "rbxassetid://9478562327"
 		
 	})
 end
