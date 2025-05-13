@@ -1,0 +1,25 @@
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ProtectedGui"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 10
+-- AA
+screenGui.Parent = game.CoreGui
+-- AA
+local btn = Instance.new("TextButton")
+btn.Name = "btn"
+btn.Text = "AA test"
+btn.Size = UDim2.new(0, 100, 0, 100)
+btn.Position = UDim2.new(0, 30, 0, 30)
+btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+btn.TextScaled = true
+btn.Font = Enum.Font.GothamBold
+btn.Active = true
+btn.Draggable = true
+btn.Parent = screenGui
+-- Add UICorner to the button
+local btncorner = Instance.new("UICorner")
+btncorner.CornerRadius = UDim.new(0, 10)
+btncorner.Parent = btn
