@@ -30,7 +30,7 @@ btncorner.Parent = btn
 -- Camlock settings
 local camlockEnabled = false
 local smoothness = 0.9
-local range = 100 -- Max lock-on range
+local range = 1000 -- Max lock-on range
 local currentTarget
 
 -- Get closest player to mouse/camera center
