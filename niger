@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
---create niger
+-- UI Setup
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "screenGui"
 screenGui.Parent = game.CoreGui
@@ -11,7 +11,7 @@ screenGui.Parent = game.CoreGui
 local btn = Instance.new("TextButton")
 btn.Name = "textbutton"
 btn.Text = "Skidder.cc"
-btn.Size = UDim2.new(0, 100, 0, 100)
+btn.Size = UDim2.new(0, 200, 0, 200)
 btn.Position = UDim2.new(0, 30, 0, 30)
 btn.TextSize = 25
 btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
@@ -25,22 +25,25 @@ local btncorner = Instance.new("UICorner")
 btncorner.CornerRadius = UDim.new(0, 10)
 btncorner.Parent = btn
 
--- Camlock variables
+-- Camlock settings
 local camlockEnabled = false
 local smoothness = 0.9
-local range = math.huge
+local range = 100 -- Reasonable range for target locking
 local currentTarget
 
--- Function to get the closest target
+-- Get closest visible player within range
 local function getClosestPlayer()
 	local closestPlayer
 	local shortestDistance = range
 
-	for _, player in pairs(Players:GetPlayers()) do
+	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local targetHRP = player.Character.HumanoidRootPart
-			local distance = (targetHRP.Position - Camera.CFrame.Position).Magnitude
-			if distance < shortestDistance then
+			local hrp = player.Character.HumanoidRootPart
+			local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
+
+			-- Check if within range and on screen
+			local screenPoint, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+			if distance < shortestDistance and onScreen then
 				shortestDistance = distance
 				closestPlayer = player
 			end
@@ -50,7 +53,7 @@ local function getClosestPlayer()
 	return closestPlayer
 end
 
--- Camlock logic
+-- Lock the camera smoothly
 RunService.RenderStepped:Connect(function()
 	if camlockEnabled and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
 		local targetPos = currentTarget.Character.HumanoidRootPart.Position
@@ -60,19 +63,23 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
--- Button toggle
+-- Toggle camlock on button click
 btn.MouseButton1Click:Connect(function()
 	camlockEnabled = not camlockEnabled
 
 	if camlockEnabled then
 		currentTarget = getClosestPlayer()
-		btn.Text = "Camlock: ON"
-		warn("Skidder.cc - Camlock Enabled")
+		if currentTarget then
+			btn.Text = "Camlock: ON"
+			warn("Skidder.cc - Camlock Enabled on:", currentTarget.Name)
+		else
+			camlockEnabled = false
+			btn.Text = "Camlock: OFF"
+			warn("No target found within range.")
+		end
 	else
 		currentTarget = nil
 		btn.Text = "Camlock: OFF"
 		warn("Skidder.cc - Camlock Disabled")
 	end
 end)
-
-
