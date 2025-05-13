@@ -1,25 +1,31 @@
--- Create ScreenGui
+local Players = game:GetService("Players")
+
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ProtectedGui"
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.DisplayOrder = 10
--- AA
+screenGui.Name = "screenGui"
 screenGui.Parent = game.CoreGui
--- AA
+
 local btn = Instance.new("TextButton")
-btn.Name = "btn"
-btn.Text = "AA test"
+btn.Name = "textbutton"
+btn.Text = "Skidder.cc"
 btn.Size = UDim2.new(0, 100, 0, 100)
 btn.Position = UDim2.new(0, 30, 0, 30)
-btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+btn.TextSize = 30
+btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-btn.TextScaled = true
 btn.Font = Enum.Font.GothamBold
 btn.Active = true
 btn.Draggable = true
 btn.Parent = screenGui
--- Add UICorner to the button
-local btncorner = Instance.new("UICorner")
-btncorner.CornerRadius = UDim.new(0, 10)
-btncorner.Parent = btn
+
+-- Toggle WalkSpeed between 100 and 50
+local toggled = false
+
+btn.MouseButton1Click:Connect(function()
+	local humanoid = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		toggled = not toggled
+		humanoid.WalkSpeed = toggled and 100 or 50
+		warn("Skidder.cc - WalkSpeed set to", humanoid.WalkSpeed)
+	end
+end)
+
