@@ -6,7 +6,7 @@ local gui = Instance.new("ScreenGui", gethui and gethui() or game:GetService("Co
 gui.Name = "screenGui"
 
 -- Create the button
-local btn = Instance.new("TextButton", gui)  -- Fixed 'screenGui' to 'gui'
+local btn = Instance.new("TextButton", screenGui)  -- Fixed 'screenGui' to 'gui'
 btn.Name = "btn"
 btn.Text = "Niger: OFF"
 btn.Size = UDim2(0, 100, 0, 40)
