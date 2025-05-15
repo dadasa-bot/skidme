@@ -1,8 +1,6 @@
 local coregui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 
-local localplayer = game.Players.LocalPlayer
-
 local screenGui = Instance.new("ScreenGui", CoreGui)
 screenGui.Name = "screenGui"
 
