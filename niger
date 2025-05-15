@@ -1,39 +1,26 @@
-local tcs = game:GetService("TextChatService")
-local plrs = game:GetService("Players").LocalPlayer
-local rs = game:GetService("RunService")
+local coregui = game:GetService("CoreGui")
+local players = game:GetService("Players")
 
-local gui = Instance.new("ScreenGui", gethui and gethui() or game:GetService("CoreGui"))
-gui.Name = "screenGui"
+local localplayer = game.Players.LocalPlayer
 
--- Create the button
-local btn = Instance.new("TextButton", screenGui)  -- Fixed 'screenGui' to 'gui'
+local screenGui = Instance.new("ScreenGui", CoreGui)
+screenGui.Name = "screenGui"
+
+local btn = Instance.new("TextButton", screenGui)
 btn.Name = "btn"
-btn.Text = "Niger: OFF"
+btn.Text = "Anti afk"
 btn.Size = UDim2(0, 100, 0, 40)
 btn.Position = UDim2(0, 30, 0, 30)
-btn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+btn.BackgroundColor3 = Color3.fromRGB(40, 40, 120)
 btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+btn.Font = Enum.Font.GothamBold
 btn.TextScaled = true
-btn.Active = true
-btn.Draggable = true
 
--- Add rounded corners to the button
-local btnuicorner = Instance.new("UICorner", btn)
-btn.CornerRadius = UDim.new(0, 10)
+local uibtn = Instance.new(UICorner", uibtn)
+uibtn.CornerRadius = UDim.new(0, 10)
 
--- Define the btnclicked variable
-local btnclicked = false  -- Initialize this variable
+print("hi")
 
--- Button click handler
 btn.MouseButton1Click:Connect(function()
-    if not btnclicked then  -- Check if it was not clicked yet
-        btn.Text = "Niger: |ON"
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 100
-        btnclicked = true  -- Set to true after it's clicked
-    else
-        btn.Text = "Niger: |OFF"
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16  -- Reset WalkSpeed to default
-        btnclicked = false  -- Set back to false when turned off
-    end
-end)
-print("Hi")
+    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/anti-afk%20via%20autofocus.txt"))()
+end
