@@ -1,197 +1,185 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
+local spoofedValues = { WalkSpeed = 16, JumpPower = 50 }
 
-local spoofedValues = {
-    WalkSpeed = 16,
-    JumpPower = 50,
-}
+-- GUI Setup
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "SecureWSJP_GUI"
+gui.ResetOnSpawn = false
 
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Size = UDim2.new(0, 160, 0, 50)
+toggleBtn.Position = UDim2.new(0, 20, 0.5, -120)
+toggleBtn.Text = "Open Speed Menu"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 20
+Instance.new("UICorner", toggleBtn)
+
+-- Main Frame
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 250, 0, 230)
+mainFrame.Position = UDim2.new(0, 20, 0.5, -50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.Visible = false
+mainFrame.Active = true
+Instance.new("UICorner", mainFrame)
+Instance.new("UIStroke", mainFrame).Color = Color3.fromRGB(255, 255, 255)
+
+-- UI Layout
+local layout = Instance.new("UIListLayout", mainFrame)
+layout.Padding = UDim.new(0, 10)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+Instance.new("UIPadding", mainFrame).PaddingTop = UDim.new(0, 10)
+
+-- Input Fields
+local wsBox = Instance.new("TextBox", mainFrame)
+wsBox.Size = UDim2.new(1, -20, 0, 40)
+wsBox.PlaceholderText = "WalkSpeed"
+wsBox.TextColor3 = Color3.new(1, 1, 1)
+wsBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+wsBox.Font = Enum.Font.SourceSans
+wsBox.TextSize = 18
+Instance.new("UICorner", wsBox)
+
+local jpBox = Instance.new("TextBox", mainFrame)
+jpBox.Size = UDim2.new(1, -20, 0, 40)
+jpBox.PlaceholderText = "JumpPower"
+jpBox.TextColor3 = Color3.new(1, 1, 1)
+jpBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+jpBox.Font = Enum.Font.SourceSans
+jpBox.TextSize = 18
+Instance.new("UICorner", jpBox)
+
+-- Apply Button
+local applyBtn = Instance.new("TextButton", mainFrame)
+applyBtn.Size = UDim2.new(1, -20, 0, 40)
+applyBtn.Text = "Apply"
+applyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+applyBtn.TextColor3 = Color3.new(1, 1, 1)
+applyBtn.Font = Enum.Font.SourceSansBold
+applyBtn.TextSize = 20
+Instance.new("UICorner", applyBtn)
+
+-- Reset Button
+local resetBtn = Instance.new("TextButton", mainFrame)
+resetBtn.Size = UDim2.new(1, -20, 0, 40)
+resetBtn.Text = "Reset"
+resetBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+resetBtn.TextColor3 = Color3.new(1, 1, 1)
+resetBtn.Font = Enum.Font.SourceSansBold
+resetBtn.TextSize = 18
+Instance.new("UICorner", resetBtn)
+
+-- GUI Toggle
+toggleBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- Value Application
+applyBtn.MouseButton1Click:Connect(function()
+    local ws = tonumber(wsBox.Text)
+    local jp = tonumber(jpBox.Text)
+    if ws then spoofedValues.WalkSpeed = ws end
+    if jp then spoofedValues.JumpPower = jp end
+end)
+
+resetBtn.MouseButton1Click:Connect(function()
+    spoofedValues.WalkSpeed = 16
+    spoofedValues.JumpPower = 50
+    wsBox.Text = ""
+    jpBox.Text = ""
+end)
+
+-- Make GUI Draggable
+local dragging, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- METATABLE SPOOF PROTECTION
+local humanoid
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
+
 local oldIndex = mt.__index
 local oldNewIndex = mt.__newindex
+local hooked = false
 
-local humanoid -- forward declare
+local function rehook()
+    if hooked then return end
+    hooked = true
 
-mt.__index = newcclosure(function(self, key)
-    if self == humanoid and spoofedValues[key] then
-        return spoofedValues[key]
+    mt.__index = newcclosure(function(self, key)
+        if self == humanoid and spoofedValues[key] then
+            return spoofedValues[key]
+        end
+        return oldIndex(self, key)
+    end)
+
+    mt.__newindex = newcclosure(function(self, key, value)
+        if self == humanoid and spoofedValues[key] then
+            spoofedValues[key] = value -- silently spoof
+            return
+        end
+        return oldNewIndex(self, key, value)
+    end)
+
+    -- Spoof getrawmetatable so others can't view the real one
+    getgenv().getrawmetatable = function(obj)
+        local fake = {}
+        for k, v in pairs(mt) do
+            fake[k] = v
+        end
+        return setmetatable({}, {
+            __index = fake,
+            __newindex = function() end
+        })
     end
-    return oldIndex(self, key)
-end)
 
-mt.__newindex = newcclosure(function(self, key, value)
-    if self == humanoid and (key == "WalkSpeed" or key == "JumpPower") then
-        spoofedValues[key] = value
-        return -- block actual assignment to humanoid
-    end
-    return oldNewIndex(self, key, value)
-end)
-setreadonly(mt, true)
-
-local function setup()
-    local character = player.Character or player.CharacterAdded:Wait()
-    humanoid = character:WaitForChild("Humanoid")
-
-    -- Create GUI if not exists
-    local gui = player:WaitForChild("PlayerGui"):FindFirstChild("WSJP_GUI")
-    if gui then gui:Destroy() end
-    gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-    gui.Name = "WSJP_GUI"
-    gui.ResetOnSpawn = false
-
-    -- Open Button
-    local openButton = Instance.new("TextButton", gui)
-    openButton.Size = UDim2.new(0, 160, 0, 50)
-    openButton.Position = UDim2.new(0, 20, 0.5, -120)
-    openButton.Text = "Open Speed Menu"
-    openButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    openButton.TextColor3 = Color3.new(1, 1, 1)
-    openButton.Font = Enum.Font.SourceSansBold
-    openButton.TextSize = 20
-    Instance.new("UICorner", openButton)
-    local strokeOpen = Instance.new("UIStroke", openButton)
-    strokeOpen.Thickness = 2
-    strokeOpen.Color = Color3.fromRGB(255, 255, 255)
-
-    -- Main Frame
-    local mainFrame = Instance.new("Frame", gui)
-    mainFrame.Size = UDim2.new(0, 250, 0, 230)
-    mainFrame.Position = UDim2.new(0, 20, 0.5, -50)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.Visible = false
-    mainFrame.Active = true
-
-    local frameCorner = Instance.new("UICorner", mainFrame)
-    local frameStroke = Instance.new("UIStroke", mainFrame)
-    frameStroke.Thickness = 2
-    frameStroke.Color = Color3.fromRGB(255, 255, 255)
-
-    local layout = Instance.new("UIListLayout", mainFrame)
-    layout.Padding = UDim.new(0, 10)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    local padding = Instance.new("UIPadding", mainFrame)
-    padding.PaddingTop = UDim.new(0, 10)
-    padding.PaddingLeft = UDim.new(0, 10)
-    padding.PaddingRight = UDim.new(0, 10)
-
-    -- WalkSpeed TextBox
-    local wsBox = Instance.new("TextBox", mainFrame)
-    wsBox.Size = UDim2.new(1, 0, 0, 40)
-    wsBox.PlaceholderText = "Enter WalkSpeed"
-    wsBox.Text = ""
-    wsBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    wsBox.TextColor3 = Color3.new(1, 1, 1)
-    wsBox.Font = Enum.Font.SourceSans
-    wsBox.TextSize = 18
-    Instance.new("UICorner", wsBox)
-
-    -- JumpPower TextBox
-    local jpBox = Instance.new("TextBox", mainFrame)
-    jpBox.Size = UDim2.new(1, 0, 0, 40)
-    jpBox.PlaceholderText = "Enter JumpPower"
-    jpBox.Text = ""
-    jpBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    jpBox.TextColor3 = Color3.new(1, 1, 1)
-    jpBox.Font = Enum.Font.SourceSans
-    jpBox.TextSize = 18
-    Instance.new("UICorner", jpBox)
-
-    -- Apply Button
-    local applyBtn = Instance.new("TextButton", mainFrame)
-    applyBtn.Size = UDim2.new(1, 0, 0, 40)
-    applyBtn.Text = "Apply"
-    applyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-    applyBtn.TextColor3 = Color3.new(1, 1, 1)
-    applyBtn.Font = Enum.Font.SourceSansBold
-    applyBtn.TextSize = 20
-    Instance.new("UICorner", applyBtn)
-
-    -- Reset Button
-    local resetBtn = Instance.new("TextButton", mainFrame)
-    resetBtn.Size = UDim2.new(1, 0, 0, 40)
-    resetBtn.Text = "Reset to Default"
-    resetBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-    resetBtn.TextColor3 = Color3.new(1, 1, 1)
-    resetBtn.Font = Enum.Font.SourceSansBold
-    resetBtn.TextSize = 18
-    Instance.new("UICorner", resetBtn)
-
-    openButton.MouseButton1Click:Connect(function()
-        mainFrame.Visible = not mainFrame.Visible
-    end)
-
-    applyBtn.MouseButton1Click:Connect(function()
-        local ws = tonumber(wsBox.Text)
-        local jp = tonumber(jpBox.Text)
-
-        if ws then
-            spoofedValues.WalkSpeed = ws
-        end
-        if jp then
-            spoofedValues.JumpPower = jp
-        end
-    end)
-
-    resetBtn.MouseButton1Click:Connect(function()
-        spoofedValues.WalkSpeed = 16
-        spoofedValues.JumpPower = 50
-        wsBox.Text = ""
-        jpBox.Text = ""
-    end)
-
-    -- Draggable code
-    local dragging = false
-    local dragInput, dragStart, startPos
-
-    mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    mainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            mainFrame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    -- Constantly enforce spoofed values on humanoid (bypass other scripts)
-    task.spawn(function()
-        while task.wait(0.1) do
-            if humanoid and humanoid.Parent then
-                oldNewIndex(humanoid, "WalkSpeed", spoofedValues.WalkSpeed)
-                oldNewIndex(humanoid, "JumpPower", spoofedValues.JumpPower)
-            end
-        end
-    end)
+    setreadonly(mt, true)
 end
 
-setup()
+local function setupChar()
+    local char = player.Character or player.CharacterAdded:Wait()
+    humanoid = char:WaitForChild("Humanoid")
+    rehook()
+end
 
+-- Constantly apply spoofed values to override changes
+RunService.RenderStepped:Connect(function()
+    if humanoid then
+        pcall(function()
+            humanoid.WalkSpeed = spoofedValues.WalkSpeed
+            humanoid.JumpPower = spoofedValues.JumpPower
+        end)
+    end
+end)
+
+-- Initial setup
+setupChar()
 player.CharacterAdded:Connect(function()
     task.wait(1)
-    setup()
+    setupChar()
 end)
