@@ -1,24 +1,197 @@
-local coregui = game:GetService("CoreGui")
-local players = game:GetService("Players")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
 
-local screenGui = Instance.new("ScreenGui", CoreGui)
-screenGui.Name = "screenGui"
+local spoofedValues = {
+    WalkSpeed = 16,
+    JumpPower = 50,
+}
 
-local btn = Instance.new("TextButton", screenGui)
-btn.Name = "btn"
-btn.Text = "Anti afk"
-btn.Size = UDim2(0, 100, 0, 40)
-btn.Position = UDim2(0, 30, 0, 30)
-btn.BackgroundColor3 = Color3.fromRGB(40, 40, 120)
-btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-btn.Font = Enum.Font.GothamBold
-btn.TextScaled = true
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local oldIndex = mt.__index
+local oldNewIndex = mt.__newindex
 
-local uibtn = Instance.new(UICorner", uibtn)
-uibtn.CornerRadius = UDim.new(0, 10)
+local humanoid -- forward declare
 
-print("hi")
+mt.__index = newcclosure(function(self, key)
+    if self == humanoid and spoofedValues[key] then
+        return spoofedValues[key]
+    end
+    return oldIndex(self, key)
+end)
 
-btn.MouseButton1Click:Connect(function()
-    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/anti-afk%20via%20autofocus.txt"))()
+mt.__newindex = newcclosure(function(self, key, value)
+    if self == humanoid and (key == "WalkSpeed" or key == "JumpPower") then
+        spoofedValues[key] = value
+        return -- block actual assignment to humanoid
+    end
+    return oldNewIndex(self, key, value)
+end)
+setreadonly(mt, true)
+
+local function setup()
+    local character = player.Character or player.CharacterAdded:Wait()
+    humanoid = character:WaitForChild("Humanoid")
+
+    -- Create GUI if not exists
+    local gui = player:WaitForChild("PlayerGui"):FindFirstChild("WSJP_GUI")
+    if gui then gui:Destroy() end
+    gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+    gui.Name = "WSJP_GUI"
+    gui.ResetOnSpawn = false
+
+    -- Open Button
+    local openButton = Instance.new("TextButton", gui)
+    openButton.Size = UDim2.new(0, 160, 0, 50)
+    openButton.Position = UDim2.new(0, 20, 0.5, -120)
+    openButton.Text = "Open Speed Menu"
+    openButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    openButton.TextColor3 = Color3.new(1, 1, 1)
+    openButton.Font = Enum.Font.SourceSansBold
+    openButton.TextSize = 20
+    Instance.new("UICorner", openButton)
+    local strokeOpen = Instance.new("UIStroke", openButton)
+    strokeOpen.Thickness = 2
+    strokeOpen.Color = Color3.fromRGB(255, 255, 255)
+
+    -- Main Frame
+    local mainFrame = Instance.new("Frame", gui)
+    mainFrame.Size = UDim2.new(0, 250, 0, 230)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -50)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    mainFrame.Visible = false
+    mainFrame.Active = true
+
+    local frameCorner = Instance.new("UICorner", mainFrame)
+    local frameStroke = Instance.new("UIStroke", mainFrame)
+    frameStroke.Thickness = 2
+    frameStroke.Color = Color3.fromRGB(255, 255, 255)
+
+    local layout = Instance.new("UIListLayout", mainFrame)
+    layout.Padding = UDim.new(0, 10)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local padding = Instance.new("UIPadding", mainFrame)
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+
+    -- WalkSpeed TextBox
+    local wsBox = Instance.new("TextBox", mainFrame)
+    wsBox.Size = UDim2.new(1, 0, 0, 40)
+    wsBox.PlaceholderText = "Enter WalkSpeed"
+    wsBox.Text = ""
+    wsBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    wsBox.TextColor3 = Color3.new(1, 1, 1)
+    wsBox.Font = Enum.Font.SourceSans
+    wsBox.TextSize = 18
+    Instance.new("UICorner", wsBox)
+
+    -- JumpPower TextBox
+    local jpBox = Instance.new("TextBox", mainFrame)
+    jpBox.Size = UDim2.new(1, 0, 0, 40)
+    jpBox.PlaceholderText = "Enter JumpPower"
+    jpBox.Text = ""
+    jpBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    jpBox.TextColor3 = Color3.new(1, 1, 1)
+    jpBox.Font = Enum.Font.SourceSans
+    jpBox.TextSize = 18
+    Instance.new("UICorner", jpBox)
+
+    -- Apply Button
+    local applyBtn = Instance.new("TextButton", mainFrame)
+    applyBtn.Size = UDim2.new(1, 0, 0, 40)
+    applyBtn.Text = "Apply"
+    applyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    applyBtn.TextColor3 = Color3.new(1, 1, 1)
+    applyBtn.Font = Enum.Font.SourceSansBold
+    applyBtn.TextSize = 20
+    Instance.new("UICorner", applyBtn)
+
+    -- Reset Button
+    local resetBtn = Instance.new("TextButton", mainFrame)
+    resetBtn.Size = UDim2.new(1, 0, 0, 40)
+    resetBtn.Text = "Reset to Default"
+    resetBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    resetBtn.TextColor3 = Color3.new(1, 1, 1)
+    resetBtn.Font = Enum.Font.SourceSansBold
+    resetBtn.TextSize = 18
+    Instance.new("UICorner", resetBtn)
+
+    openButton.MouseButton1Click:Connect(function()
+        mainFrame.Visible = not mainFrame.Visible
+    end)
+
+    applyBtn.MouseButton1Click:Connect(function()
+        local ws = tonumber(wsBox.Text)
+        local jp = tonumber(jpBox.Text)
+
+        if ws then
+            spoofedValues.WalkSpeed = ws
+        end
+        if jp then
+            spoofedValues.JumpPower = jp
+        end
+    end)
+
+    resetBtn.MouseButton1Click:Connect(function()
+        spoofedValues.WalkSpeed = 16
+        spoofedValues.JumpPower = 50
+        wsBox.Text = ""
+        jpBox.Text = ""
+    end)
+
+    -- Draggable code
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    mainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    mainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    -- Constantly enforce spoofed values on humanoid (bypass other scripts)
+    task.spawn(function()
+        while task.wait(0.1) do
+            if humanoid and humanoid.Parent then
+                oldNewIndex(humanoid, "WalkSpeed", spoofedValues.WalkSpeed)
+                oldNewIndex(humanoid, "JumpPower", spoofedValues.JumpPower)
+            end
+        end
+    end)
 end
+
+setup()
+
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    setup()
+end)
